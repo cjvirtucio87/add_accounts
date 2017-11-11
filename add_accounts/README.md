@@ -5,6 +5,8 @@ A simple script to add user accounts to your MySQL database. Easily configurable
 The JSON config file must be named `aaconfig.json` and should have the following shape:
 
 ```
+# linux: /tmp/aaconfig.json
+# windows: %TMP%\aaconfig.json
 {
   "Admin": "root",
   "Password": "123asiaslocal_lr7",
@@ -23,4 +25,4 @@ The JSON config file must be named `aaconfig.json` and should have the following
 }
 ```
 
-`Admin` represents the account that has admin privileges over the database. `Password` is that account's password. This script interfaces with the MySQL daemon over tcp, so you need to specify a `Host` and a `Port`. You then define the credentials for the user accounts that you want ot create as an array mapped to `UserConfigs`.
+`Admin` represents the account that has admin privileges over the database. `Password` is that account's password. This script interfaces with the MySQL daemon over `tcp`, so you need to specify a `Host` and a `Port`. You then define the credentials for the user accounts that you want ot create as an array mapped to `UserConfigs`.
