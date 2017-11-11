@@ -1,6 +1,7 @@
 package main
 
 import (
+	"os"
 	"io/ioutil"
 	"encoding/json"
 	"fmt"
@@ -31,6 +32,29 @@ type fnCreateUserWithAdminPassword func (string) fnCreateUserWithHost
 
 type fnCreateUserWithAdmin func (string) fnCreateUserWithAdminPassword
 
+func createUser (dsn string, username string, password string) {
+	db, err := sql.Open("mysql", dsn)
+	
+	if err != nil {
+		panic(err)
+	}
+
+	sqlCreateUser := fmt.Sprintf(`
+		CREATE USER 
+			'%s' 
+		IDENTIFIED BY
+			'%s'
+	`, username, password)
+
+	_, err = db.Exec(sqlCreateUser)
+
+	if err != nil {
+		panic(err)
+	}
+
+	defer db.Close()	
+}
+
 func createUserWithAdmin (admin string) fnCreateUserWithAdminPassword {
 	return func (password string) fnCreateUserWithHost {
 		return func (host string) fnCreateUserWithPort {
@@ -40,27 +64,8 @@ func createUserWithAdmin (admin string) fnCreateUserWithAdminPassword {
 				return func (uconf userConfig) {
 					username := uconf.Name
 					password := uconf.Password
-				
-					db, err := sql.Open("mysql", dsn)
-				
-					if err != nil {
-						panic(err)
-					}
-				
-					sqlCreateUser := fmt.Sprintf(`
-						CREATE USER 
-							'%s' 
-						IDENTIFIED BY
-							'%s'
-					`, username, password)
-				
-					_, err = db.Exec(sqlCreateUser)
-				
-					if err != nil {
-						panic(err)
-					}
-				
-					defer db.Close()
+
+					createUser(dsn, username, password);
 				}
 			}
 		}
@@ -71,7 +76,7 @@ func main() {
 	var addAccountsConfig addAccountsConfig
 
 	filename := "aaconfig.json"
-	confj, err := ioutil.ReadFile(filename)
+	confj, err := ioutil.ReadFile(os.TempDir() + filename)
 
 	if err != nil {
 		panic(err)
