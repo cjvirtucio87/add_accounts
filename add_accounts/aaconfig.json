@@ -1,0 +1,16 @@
+{
+  "Admin": "root",
+  "Password": "123asiaslocal_lr7",
+  "Host": "127.0.0.1",
+  "Port": "3306",
+  "UserConfigs": [
+    {
+      "Name": "test_user0",
+      "Password": "test_pw0"
+    },
+    {
+      "Name": "test_user1",
+      "Password": "test_pw1"
+    }
+  ]  
+}
