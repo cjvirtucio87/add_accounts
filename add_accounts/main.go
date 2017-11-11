@@ -22,15 +22,7 @@ type addAccountsConfig struct {
 	UserConfigs []userConfig
 }
 
-type fnCreateUserWithConfig func (userConfig)
-
-type fnCreateUserWithPort func (string) fnCreateUserWithConfig
-
-type fnCreateUserWithHost func (string) fnCreateUserWithPort
-
-type fnCreateUserWithAdminPassword func (string) fnCreateUserWithHost
-
-type fnCreateUserWithAdmin func (string) fnCreateUserWithAdminPassword
+type fnCreateUserWithUConf func (userConfig)
 
 func createUser (dsn string, username string, password string) {
 	db, err := sql.Open("mysql", dsn)
@@ -55,28 +47,27 @@ func createUser (dsn string, username string, password string) {
 	defer db.Close()	
 }
 
-func createUserWithAdmin (admin string) fnCreateUserWithAdminPassword {
-	return func (password string) fnCreateUserWithHost {
-		return func (host string) fnCreateUserWithPort {
-			return func (port string) fnCreateUserWithConfig {
-				dsn := fmt.Sprintf("%s:%s@tcp(%s:%s)/", admin, password, host, port)
+func createUserWithAddAccountsConf (addAccountsConfig addAccountsConfig) fnCreateUserWithUConf {
+	admin := addAccountsConfig.Admin
+	password := addAccountsConfig.Password
+	host := addAccountsConfig.Host
+	port := addAccountsConfig.Port
+	dsn := fmt.Sprintf("%s:%s@tcp(%s:%s)/", admin, password, host, port)
 
-				return func (uconf userConfig) {
-					username := uconf.Name
-					password := uconf.Password
+	return func (uconf userConfig) {
+		username := uconf.Name
+		password := uconf.Password
 
-					createUser(dsn, username, password);
-				}
-			}
-		}
+		createUser(dsn, username, password);
 	}
 }
 
-func main() {
+func createAddAccountsConfig (filename string) addAccountsConfig {
 	var addAccountsConfig addAccountsConfig
-
-	filename := "aaconfig.json"
-	confj, err := ioutil.ReadFile(os.TempDir() + filename)
+	
+	tmp := os.TempDir()
+	fileDir := fmt.Sprintf("%s\\%s", tmp, filename)
+	confj, err := ioutil.ReadFile(fileDir)
 
 	if err != nil {
 		panic(err)
@@ -86,20 +77,20 @@ func main() {
 
 	if err != nil {
 		panic(err)
-	}
+	}	
 
-	admin := addAccountsConfig.Admin
-	password := addAccountsConfig.Password
-	host := addAccountsConfig.Host
-	port := addAccountsConfig.Port
+	return addAccountsConfig
+}
+
+func main() {
+	filename := "aaconfig.json"
+
+	addAccountsConfig := createAddAccountsConfig(filename)
 	userConfigs := addAccountsConfig.UserConfigs
 
-	fnCreateUserWithAdminPassword := createUserWithAdmin(admin)
-	fnCreateUserWithHost := fnCreateUserWithAdminPassword(password)
-	fnCreateUserWithPort := fnCreateUserWithHost(host)
-	fnCreateUserWithConfig := fnCreateUserWithPort(port)
+	fnCreateUserWithUConf := createUserWithAddAccountsConf(addAccountsConfig)
 
 	for _, uconf := range userConfigs {
-		fnCreateUserWithConfig(uconf);
+		fnCreateUserWithUConf(uconf);
 	}
 }
