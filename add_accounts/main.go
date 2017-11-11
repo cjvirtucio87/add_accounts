@@ -24,6 +24,12 @@ type addAccountsConfig struct {
 
 type fnCreateUserWithUConf func (userConfig)
 
+type fnGrantPrivilegesWithUConf func (userConfig)
+
+type fnSQL func (dsn string, username string, password string)
+
+type fnExecuteSQL func (userConfig)
+
 func createUser (dsn string, username string, password string) {
 	db, err := sql.Open("mysql", dsn)
 	
@@ -31,14 +37,14 @@ func createUser (dsn string, username string, password string) {
 		panic(err)
 	}
 
-	sqlCreateUser := fmt.Sprintf(`
+	sqlQuery := fmt.Sprintf(`
 		CREATE USER 
-			'%s' 
+			'%s'
 		IDENTIFIED BY
 			'%s'
 	`, username, password)
 
-	_, err = db.Exec(sqlCreateUser)
+	_, err = db.Exec(sqlQuery)
 
 	if err != nil {
 		panic(err)
@@ -47,18 +53,49 @@ func createUser (dsn string, username string, password string) {
 	defer db.Close()	
 }
 
-func createUserWithAddAccountsConf (addAccountsConfig addAccountsConfig) fnCreateUserWithUConf {
-	admin := addAccountsConfig.Admin
-	password := addAccountsConfig.Password
-	host := addAccountsConfig.Host
-	port := addAccountsConfig.Port
+func grantPrivileges (dsn string, username string, password string) {
+	db, err := sql.Open("mysql", dsn)
+	
+	if err != nil {
+		panic(err)
+	}
+
+	sqlQuery := fmt.Sprintf(`
+		GRANT ALL PRIVILEGES ON 
+			*.*
+		TO 
+			'%s'
+	`, username)
+
+	_, err = db.Exec(sqlQuery)
+
+	if err != nil {
+		panic(err)
+	}
+
+	sqlQuery = `FLUSH PRIVILEGES`
+
+	_, err = db.Exec(sqlQuery)
+
+	if err != nil {
+		panic(err)
+	}
+
+	defer db.Close()
+}
+
+func composeSQL (conf addAccountsConfig, cb fnSQL) fnExecuteSQL {
+	admin := conf.Admin
+	password := conf.Password
+	host := conf.Host
+	port := conf.Port
 	dsn := fmt.Sprintf("%s:%s@tcp(%s:%s)/", admin, password, host, port)
 
 	return func (uconf userConfig) {
 		username := uconf.Name
 		password := uconf.Password
 
-		createUser(dsn, username, password);
+		cb(dsn, username, password);
 	}
 }
 
@@ -88,9 +125,11 @@ func main() {
 	addAccountsConfig := createAddAccountsConfig(filename)
 	userConfigs := addAccountsConfig.UserConfigs
 
-	fnCreateUserWithUConf := createUserWithAddAccountsConf(addAccountsConfig)
+	fnCreateUser := composeSQL(addAccountsConfig, createUser)
+	fnGrantPrivileges := composeSQL(addAccountsConfig, grantPrivileges)
 
 	for _, uconf := range userConfigs {
-		fnCreateUserWithUConf(uconf);
+		fnCreateUser(uconf)
+		fnGrantPrivileges(uconf)
 	}
 }
