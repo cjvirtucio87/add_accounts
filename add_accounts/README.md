@@ -3,7 +3,7 @@
 A simple script to add user accounts to your MySQL database. Easily configurable with a JSON file. Just place it in your platform's `temp` folder.
 
 
-###USAGE
+### USAGE
 The JSON config file must be named `aaconfig.json` and should have the following shape:
 
 ```
